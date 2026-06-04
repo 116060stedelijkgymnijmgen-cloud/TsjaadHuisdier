@@ -1,0 +1,7 @@
+node_modules/
+dist/
+icon.iconset/
+icon.icns
+elephant_square.png
+.DS_Store
+*.log
