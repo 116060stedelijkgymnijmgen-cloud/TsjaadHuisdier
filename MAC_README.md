@@ -43,6 +43,20 @@ You can also use the included launcher:
 
 You need Node.js 18+ and npm.
 
+**One-shot self-builder** (handles install, icon generation, build, and
+zips the result as a ready-to-run bundle):
+
+```bash
+cd mac
+node tsjaadbuilder.js --mac --run
+```
+
+The final ready-to-run zip is `mac/TsjaadOlifant-mac-arm64.zip` — extract it
+and double-click `TsjaadOlifant.command` to launch (it strips Gatekeeper
+and signs the app for you).
+
+**Manual build** (if you want more control):
+
 ```bash
 cd mac
 npm install
