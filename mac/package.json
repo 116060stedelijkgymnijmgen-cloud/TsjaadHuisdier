@@ -6,7 +6,10 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
-    "build-mac": "electron-builder --mac"
+    "build-mac": "electron-builder --mac",
+    "tsjaadbuilder": "node tsjaadbuilder.js",
+    "tsjaadbuilder:mac": "node tsjaadbuilder.js --mac",
+    "tsjaadbuilder:run": "node tsjaadbuilder.js --run"
   },
   "author": "Tsjaad",
   "license": "ISC",
