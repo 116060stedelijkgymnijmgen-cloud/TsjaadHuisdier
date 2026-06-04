@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Tsjaad Olifant</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      overflow: hidden;
+      font-family: -apple-system, 'Segoe UI', sans-serif;
+      -webkit-user-select: none;
+      user-select: none;
+      pointer-events: none;
+    }
+    
+    .container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      background: transparent;
+      pointer-events: none;
+    }
+    
+    .elephant {
+      position: absolute;
+      left: 20px;
+      top: 20px;
+      width: 200px;
+      height: 200px;
+      transform: rotate(1.29deg);
+      z-index: 10;
+    }
+
+    .elephant-hitbox {
+      position: absolute;
+      left: 50px;
+      top: 50px;
+      width: 140px;
+      height: 140px;
+      cursor: pointer;
+      z-index: 11;
+      pointer-events: auto;
+    }
+
+    /* Invisible full-window catcher to detect when the mouse leaves the
+       elephant so we can re-enable click-through at the OS level. */
+    .hover-catcher {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 240px;
+      height: 240px;
+      z-index: 1;
+      pointer-events: auto;
+      background: transparent;
+    }
+    
+    .elephant img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+    }
+    
+    .bubble {
+      position: absolute;
+      left: 10px;
+      top: 5px;
+      max-width: 220px;
+      min-width: 40px;
+      background: rgba(255, 255, 255, 0.97);
+      border: 2px solid #000;
+      border-radius: 0px;
+      padding: 6px 8px;
+      font-size: 12px;
+      color: black;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.8);
+      display: none;
+      word-wrap: break-word;
+      z-index: 5;
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+      text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.2);
+      pointer-events: none;
+      line-height: 1.3;
+    }
+    
+    .bubble.visible {
+      display: block;
+    }
+    
+    /* Pixelated dialog overlay - sized to the small window */
+    .dialog-overlay {
+      position: absolute;
+      left: 0px;
+      top: 0px;
+      width: 240px;
+      height: 240px;
+      background: rgba(0, 0, 0, 0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      image-rendering: pixelated;
+      pointer-events: auto;
+    }
+
+    .dialog-overlay.visible {
+      display: flex;
+    }
+
+    .dialog-box {
+      background: #f0f0f0;
+      border: 3px solid #000;
+      box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.8);
+      padding: 10px 12px;
+      max-width: 210px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      color: #000;
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+      pointer-events: auto;
+    }
+
+    .dialog-title {
+      font-size: 13px;
+      font-weight: bold;
+      margin-bottom: 6px;
+      color: #000;
+      text-shadow: 1px 1px 0px #ffcc00;
+    }
+
+    .dialog-message {
+      font-size: 10px;
+      margin-bottom: 10px;
+      white-space: pre-wrap;
+      color: #000;
+      line-height: 1.3;
+    }
+
+    .dialog-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    .dialog-button {
+      background: #fff;
+      border: 2px solid #000;
+      box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.8);
+      padding: 4px 10px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      font-size: 11px;
+      color: #000;
+      cursor: pointer;
+      image-rendering: pixelated;
+    }
+    
+    .dialog-button:hover {
+      background: #ffcc00;
+    }
+    
+    .dialog-button:active {
+      box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.8);
+      transform: translate(2px, 2px);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hover-catcher" id="hover-catcher"></div>
+    <div class="elephant" id="elephant">
+      <img src="Tsjaad.png" id="elephant-img" alt="Elephant">
+    </div>
+    <div class="elephant-hitbox" id="elephant-hitbox"></div>
+    <div class="bubble" id="bubble"></div>
+  </div>
+  
+  <!-- Pixelated dialog overlay -->
+  <div class="dialog-overlay" id="dialog-overlay">
+    <div class="dialog-box">
+      <div class="dialog-title" id="dialog-title">🐘 Tsjaad wil internet!</div>
+      <div class="dialog-message" id="dialog-message"></div>
+      <div class="dialog-buttons">
+        <button class="dialog-button" id="dialog-yes">Ja</button>
+        <button class="dialog-button" id="dialog-no">Nee</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Audio element for sound playback -->
+  <audio id="talk-sound" preload="auto">
+    <source src="Praat.wav" type="audio/wav">
+  </audio>
+  
+  <script>
+    const { ipcRenderer } = require('electron');
+    
+    const texts = [
+      "Tsjaad", "🐘", "Meestergijs is wijs", "EUEUEUEU",
+      "Ik zuig waterputten leeg", "Ik plet toeristen", "Ik eet kinderen",
+      "Ebola uitbraak in Tsjaad!!!", "Tsjaad",
+      "Afrikanen berijden mij voor 4 cent per ritje",
+      "Meestergijs is de messias", "VRROOEEUUJEH", "Ik ben olifant!!!",
+      "Hallo!! ik eet toeristen!", "Ik zuig kinderen op met mijn slurf",
+      "Waarom heb je mij gedownload?", "Ik werk van 9-5 in een circus",
+      "SPEEL TSJAAD TD NU!!!", "Tsjaad ster is sneller dan licht",
+      "Nijlpaarden zijn zeer heet, net zoals de rest van tsjaad",
+      "Hallo!!! Het is momenteel 94 graden celcius in tsjaad!!",
+      "Ik val safari auto's aan voor de lol", "Ik eet embryo's",
+      "OH YEAAHHHHHH", "Wat voelt het fijn om een tsjaad olifant te zijn!!!"
+    ];
+    
+    const googleTexts = [
+      "Mag ik nu op computer!??", "Ikke internet gebruiken?",
+      "Ik wil wat opzoeken!!!", "Mag ik wat zoeken op google?"
+    ];
+    
+    const links = [
+      "https://kiwinator89.github.io/Tsjaad-TD/",
+      "https://kiwinator89.github.io/FiveNightsAtMeesterGijs/",
+      "https://meestergijss.github.io/TsjaadRoyale/"
+    ];
+    
+    const searchTerms = [
+      "Ebola uitbraak Tsjaad", "waar koop ik een olifant", "Meestergijs",
+      "Patrick Schimmel", "safari ongeluk olifant", "olifant circus ongeluk",
+      "nijlpaard aanval", "robot leeuwen vs wilde apen",
+      "Tsjaad TD beste strategie", "olifant vs neushoorn", "armoede Afrika",
+      "Tsjaadinator atoom raketten", "Tsjaad tribale tiran", "Tsjaad ster",
+      "Olifant VS Mecha hitler", "Olifant als huisdier nemen Nederland",
+      "Wat is moeilijker Tsjaad modus plus of aangenomen worden bij NASA",
+      "Meestergijs google maps", "Schimmelpennicklaan 59 Zutphen",
+      "Tsjaad Polio vaccins diefstal", "Opdroging Tsjaadmeer",
+      "giraffe aanval circus"
+    ];
+    
+    let isSleeping = false;
+    let isPetting = false;
+    let posX = 400, posY = 400;
+    let velX = 0, velY = 0;
+    let screenWidth = 1440, screenHeight = 900;
+    let WIN_W = 200;
+    let WIN_H = 200;
+    
+    const elephant = document.getElementById('elephant');
+    const elephantHitbox = document.getElementById('elephant-hitbox');
+    const elephantImg = document.getElementById('elephant-img');
+    const bubble = document.getElementById('bubble');
+    const talkSound = document.getElementById('talk-sound');
+    
+    // Preload the sound
+    talkSound.load();
+    talkSound.volume = 1.0;
+    
+    // Function to play sound using Web Audio API for better reliability
+    let audioContext = null;
+    let soundBuffer = null;
+    
+    async function initAudio() {
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        // Load the sound file
+        const response = await fetch('Praat.wav');
+        const arrayBuffer = await response.arrayBuffer();
+        soundBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        console.log('Sound loaded successfully');
+      } catch (e) {
+        console.log('Failed to load sound with Web Audio API:', e);
+        // Fallback to HTML5 audio
+      }
+    }
+    
+    function playTalkSound(forcePlay = false) {
+      // Only play sound sometimes (30% chance unless forced)
+      if (!forcePlay && Math.random() > 0.3) {
+        return;
+      }
+      
+      // Try Web Audio API first (more reliable in Electron)
+      if (audioContext && soundBuffer) {
+        try {
+          // Resume context if suspended (needed after user interaction)
+          if (audioContext.state === 'suspended') {
+            audioContext.resume();
+          }
+          const source = audioContext.createBufferSource();
+          source.buffer = soundBuffer;
+          
+          // Randomize pitch/speed (0.7 = lower/slower, 1.3 = higher/faster)
+          const playbackRate = 0.7 + Math.random() * 0.6;
+          source.playbackRate.value = playbackRate;
+          
+          // Randomize volume slightly
+          const gainNode = audioContext.createGain();
+          gainNode.gain.value = 0.7 + Math.random() * 0.3;
+          
+          source.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          source.start(0);
+          return;
+        } catch (e) {
+          console.log('Web Audio play failed:', e);
+        }
+      }
+      
+      // Fallback to HTML5 audio
+      try {
+        talkSound.currentTime = 0;
+        // Vary playback rate if possible
+        if (talkSound.playbackRate !== undefined) {
+          talkSound.playbackRate = 0.7 + Math.random() * 0.6;
+        }
+        const playPromise = talkSound.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(err => {
+            console.log('HTML5 audio play failed:', err);
+          });
+        }
+      } catch (e) {
+        console.log('Sound error:', e);
+      }
+    }
+    
+    // Initialize audio on first user interaction (required by browsers)
+    let audioInitialized = false;
+    function ensureAudio() {
+      if (!audioInitialized) {
+        initAudio();
+        audioInitialized = true;
+      }
+    }
+    
+    // Get screen size
+    const sizeData = ipcRenderer.sendSync('get-screen-size');
+    screenWidth = sizeData.width;
+    screenHeight = sizeData.height;
+    if (sizeData.winW) WIN_W = sizeData.winW;
+    if (sizeData.winH) WIN_H = sizeData.winH;
+    // Center the elephant initially
+    posX = Math.floor((screenWidth - WIN_W) / 2);
+    posY = Math.floor((screenHeight - WIN_H) / 2);
+    ipcRenderer.send('move-window', posX, posY);
+
+    // Dynamically toggle OS-level click-through based on whether the
+    // mouse is over the elephant (or a dialog). When the cursor leaves
+    // the elephant, the window becomes click-through again so other apps
+    // (including fullscreen ones) can be used normally.
+    const hoverCatcher = document.getElementById('hover-catcher');
+    function setIgnoreMouse(ignore) {
+      ipcRenderer.send('set-ignore-mouse', ignore);
+    }
+    elephantHitbox.addEventListener('mouseenter', () => setIgnoreMouse(false));
+    elephantHitbox.addEventListener('mouseleave', () => setIgnoreMouse(true));
+    hoverCatcher.addEventListener('mouseenter', () => setIgnoreMouse(true));
+    
+    // Click handler with rate limit (once per second)
+    let lastPetTime = 0;
+    elephantHitbox.addEventListener('mousedown', () => {
+      ensureAudio();
+      if (isSleeping) return;
+      const now = Date.now();
+      if (now - lastPetTime < 1000) return;
+      lastPetTime = now;
+      isPetting = true;
+      velX = 0;
+      velY = 0;
+      elephantImg.src = 'Aai.png';
+      showBubble("AAHHH YESS Streel mijn huid!!!");
+      playTalkSound(true);
+      setTimeout(() => hideBubble(), 3000);
+      setTimeout(() => {
+        if (!isSleeping) {
+          elephantImg.src = 'Tsjaad.png';
+          startNewWalk();
+        }
+        isPetting = false;
+      }, 2000);
+    });
+
+    function showBubble(text) {
+      bubble.textContent = text;
+      bubble.classList.add('visible');
+    }
+    
+    function hideBubble() {
+      bubble.classList.remove('visible');
+    }
+    
+    // Custom pixelated dialog
+    function showPixelDialog(message) {
+      return new Promise((resolve) => {
+        const overlay = document.getElementById('dialog-overlay');
+        const messageEl = document.getElementById('dialog-message');
+        const yesBtn = document.getElementById('dialog-yes');
+        const noBtn = document.getElementById('dialog-no');
+
+        messageEl.textContent = message;
+        overlay.classList.add('visible');
+        // Tell main process to capture mouse events for the whole window
+        // while the dialog is visible.
+        ipcRenderer.send('set-ignore-mouse', false);
+
+        function cleanup(result) {
+          overlay.classList.remove('visible');
+          yesBtn.removeEventListener('click', yesHandler);
+          noBtn.removeEventListener('click', noHandler);
+          // Restore click-through mode.
+          ipcRenderer.send('set-ignore-mouse', true);
+          resolve(result);
+        }
+
+        function yesHandler() { cleanup(true); }
+        function noHandler() { cleanup(false); }
+
+        yesBtn.addEventListener('click', yesHandler);
+        noBtn.addEventListener('click', noHandler);
+      });
+    }
+    
+    function startNewWalk() {
+      if (Math.random() < 0.20) {
+        velX = 0;
+        velY = 0;
+        return;
+      }
+      const angle = Math.random() * 2 * Math.PI;
+      const speed = Math.floor(Math.random() * 3) + 1;
+      velX = Math.cos(angle) * speed;
+      velY = Math.sin(angle) * speed;
+    }
+    
+    function moveWindow() {
+      if (!isSleeping) {
+        posX += velX;
+        posY += velY;
+        
+        if (posX < 0) { posX = 0; velX = Math.abs(velX); }
+        if (posX > screenWidth - WIN_W) { posX = screenWidth - WIN_W; velX = -Math.abs(velX); }
+        if (posY < 0) { posY = 0; velY = Math.abs(velY); }
+        if (posY > screenHeight - WIN_H) { posY = screenHeight - WIN_H; velY = -Math.abs(velY); }
+        
+        ipcRenderer.send('move-window', posX, posY);
+      }
+    }
+    
+    setInterval(moveWindow, 50);
+    
+    // Walk direction change
+    function scheduleWalkChange() {
+      const delay = Math.floor(Math.random() * 5000) + 3000;
+      setTimeout(() => {
+        if (!isSleeping && !isPetting) startNewWalk();
+        scheduleWalkChange();
+      }, delay);
+    }
+    scheduleWalkChange();
+    
+    // Talk
+    function scheduleTalk() {
+      const delay = Math.floor(Math.random() * 10000) + 4000;
+      setTimeout(async () => {
+        if (!isSleeping && !isPetting) {
+          const chance = Math.random();
+          if (chance < 0.10) {
+            const vraag = googleTexts[Math.floor(Math.random() * googleTexts.length)];
+            let url;
+            if (Math.random() < 0.5) {
+              url = links[Math.floor(Math.random() * links.length)];
+            } else {
+              const zoek = searchTerms[Math.floor(Math.random() * searchTerms.length)];
+              url = `https://www.google.com/search?q=${encodeURIComponent(zoek)}`;
+            }
+            showBubble(vraag);
+            playTalkSound();
+            
+            // Ask user with custom pixelated dialog
+            const userWants = await showPixelDialog(
+              "Tsjaad vraagt:\n\n\"" + vraag + "\"\n\n⚠️ Tsjaad Olifant wil een website openen.\nWat het is? Dat is een verrassing... 🐘"
+            );
+            if (userWants && url) {
+              window.open(url, '_blank');
+            }
+          } else {
+            const tekst = texts[Math.floor(Math.random() * texts.length)];
+            showBubble(tekst);
+            playTalkSound();
+          }
+          setTimeout(hideBubble, 4000);
+        }
+        scheduleTalk();
+      }, delay);
+    }
+    scheduleTalk();
+    
+    // Sleep
+    function scheduleSleep() {
+      const delay = Math.floor(Math.random() * 40000) + 30000;
+      setTimeout(() => {
+        if (!isSleeping) {
+          isSleeping = true;
+          velX = 0;
+          velY = 0;
+          elephantImg.src = 'Slaap.png';
+          showBubble("😴 zzz...");
+          
+          // Wake up after 10-20 seconds
+          setTimeout(() => {
+            isSleeping = false;
+            elephantImg.src = 'Tsjaad.png';
+            showBubble("👀 ik ben wakker!");
+            startNewWalk();
+            setTimeout(hideBubble, 3000);
+            scheduleSleep();
+          }, Math.floor(Math.random() * 10000) + 10000);
+        } else {
+          scheduleSleep();
+        }
+      }, delay);
+    }
+    scheduleSleep();
+  </script>
+</body>
+</html>

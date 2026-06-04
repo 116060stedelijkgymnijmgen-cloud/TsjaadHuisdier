@@ -1,0 +1,34 @@
+{
+  "name": "tsjaad-olifant",
+  "version": "1.0.0",
+  "description": "Tsjaad Olifant Desktop Pet",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build-mac": "electron-builder --mac"
+  },
+  "author": "Tsjaad",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.tsjaad.olifant",
+    "productName": "TsjaadOlifant",
+    "files": [
+      "main.js",
+      "index.html",
+      "Tsjaad.png",
+      "Aai.png",
+      "Slaap.png",
+      "Praat.wav"
+    ],
+    "mac": {
+      "category": "public.app-category.entertainment",
+      "target": "dir",
+      "icon": "icon.icns"
+    }
+  }
+}
